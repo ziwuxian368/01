@@ -1,393 +1,157 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>中国近现代通商口岸变化图</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球主要港口分布与吞吐量图</title>
+    <!-- Leaflet 核心库 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f172a; }
-        #map { width: 100vw; height: 100vh; position: relative; }
-        #header { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(15,23,42,0.82); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 12px 32px; display: flex; align-items: center; gap: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); flex-wrap: wrap; justify-content: center; }
-        #header h1 { font-size: 20px; font-weight: 700; color: #f0f4ff; letter-spacing: 1px; }
-        #header h1 span { color: #60a5fa; }
-        #header .sub { font-size: 13px; color: #94a3b8; }
-        #filter-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-        .filter-btn { padding: 4px 14px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #cbd5e1; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.25s; font-weight: 500; }
-        .filter-btn:hover { background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.3); }
-        .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; box-shadow: 0 0 20px rgba(59,130,246,0.3); }
-        .filter-btn.historical { border-color: #b91c1c; }
-        .filter-btn.historical.active { background: #b91c1c; border-color: #b91c1c; box-shadow: 0 0 20px rgba(185,28,28,0.5); }
-        .filter-btn.modern { border-color: #2563eb; }
-        .filter-btn.modern.active { background: #2563eb; border-color: #2563eb; box-shadow: 0 0 20px rgba(37,99,235,0.5); }
-        #legend { position: absolute; bottom: 30px; right: 30px; z-index: 1000; background: rgba(15,23,42,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 20px; min-width: 160px; box-shadow: 0 8px 28px rgba(0,0,0,0.5); pointer-events: none; }
-        #legend .title { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; }
-        .legend-item { display: flex; align-items: center; gap: 10px; margin: 5px 0; font-size: 12px; color: #cbd5e1; }
-        .legend-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
-        .legend-label .year { color: #94a3b8; font-size: 11px; }
-        .custom-popup .leaflet-popup-content-wrapper { background: rgba(15,23,42,0.92); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; color: #f0f4ff; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
-        .custom-popup .leaflet-popup-tip { background: rgba(15,23,42,0.92); }
-        .custom-popup .leaflet-popup-content { padding: 10px 14px; font-size: 14px; line-height: 1.7; min-width: 200px; }
-        .popup-city { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 4px; }
-        .popup-record { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; font-size: 13px; color: #e2e8f0; }
-        .popup-record .badge { display: inline-block; padding: 0 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; flex-shrink: 0; }
-        .popup-record .detail { color: #94a3b8; font-size: 12px; }
-        #stats { position: absolute; bottom: 30px; left: 30px; z-index: 1000; background: rgba(15,23,42,0.75); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 18px; color: #94a3b8; font-size: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 2px; }
-        #stats strong { color: #e2e8f0; }
-        @media (max-width: 768px) {
-            #header { top: 12px; padding: 10px 16px; width: 94%; flex-direction: column; gap: 10px; }
-            #header h1 { font-size: 16px; }
-            .filter-btn { font-size: 10px; padding: 3px 10px; }
-            #legend { bottom: 16px; right: 16px; padding: 12px 14px; min-width: 120px; }
-            .legend-item { font-size: 10px; }
-            #stats { bottom: 16px; left: 16px; padding: 8px 12px; font-size: 10px; }
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        .info {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            font-size: 14px;
+            line-height: 1.6;
         }
-        @media (max-width: 480px) {
-            #legend { display: none; }
-            #stats { bottom: 12px; left: 12px; padding: 6px 10px; font-size: 9px; }
+        .legend {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            line-height: 1.8;
+        }
+        .legend h4 { margin: 0 0 5px 0; }
+        .legend-circle {
+            display: inline-block;
+            border-radius: 50%;
+            background: #FF5733;
+            opacity: 0.7;
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
-    <!-- 顶部标题 + 筛选 -->
-    <div id="header">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h1>📍 中国近现代通商口岸变化图</h1>
-            <span class="sub">点击查看对比</span>
-        </div>
-        <div id="filter-group">
-            <button class="filter-btn active" data-filter="all">全部</button>
-            <button class="filter-btn historical" data-filter="historical">🏛️ 近代汇总</button>
-            <button class="filter-btn modern" data-filter="modern">🏙️ 现代汇总</button>
-            <button class="filter-btn" data-filter="1842">1842 南京</button>
-            <button class="filter-btn" data-filter="1858">1858 天津</button>
-            <button class="filter-btn" data-filter="1860">1860 北京</button>
-            <button class="filter-btn" data-filter="1876">1876 烟台</button>
-            <button class="filter-btn" data-filter="1890">1890·马关</button>
-            <button class="filter-btn" data-filter="1980">1980 特区</button>
-            <button class="filter-btn" data-filter="1984">1984 沿海</button>
-            <button class="filter-btn" data-filter="1985">1985 开放区</button>
-            <button class="filter-btn" data-filter="2010">2010+ 自贸</button>
-        </div>
-    </div>
-
-    <!-- 图例 -->
-    <div id="legend">
-        <div class="title">📌 开放时期</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span><span class="legend-label">1842 南京条约</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#f97316;"></span><span class="legend-label">1858 天津条约</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#eab308;"></span><span class="legend-label">1860 北京条约</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#a855f7;"></span><span class="legend-label">1876 烟台条约</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#ec4899;"></span><span class="legend-label">1890·马关条约</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span><span class="legend-label">1980 经济特区</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span><span class="legend-label">1984 沿海开放城市</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#06b6d4;"></span><span class="legend-label">1985 沿海经济开放区</span></div>
-        <div class="legend-item"><span class="legend-dot" style="background:#f472b6;"></span><span class="legend-label">2010+ 自贸区</span></div>
-        <div class="legend-item" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:6px;">
-            <span class="legend-dot" style="background:#b91c1c;"></span><span class="legend-label">近代汇总 (红)</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-dot" style="background:#2563eb;"></span><span class="legend-label">现代汇总 (蓝)</span>
-        </div>
-    </div>
-
-    <!-- 统计 -->
-    <div id="stats">
-        <div>📍 显示 <strong id="count-display">0</strong> 个口岸</div>
-        <div>📅 覆盖 <strong id="period-display">全部</strong> 时期</div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ============================================================
-        // 1. 数据定义
-        // ============================================================
-        const COORDS = {
-            '广州市': [23.1291, 113.2644], '厦门市': [24.4798, 118.0894], '福州市': [26.0745, 119.2965],
-            '宁波市': [29.8683, 121.5440], '上海市': [31.2304, 121.4737], '营口市': [40.6668, 122.2352],
-            '烟台市': [37.5135, 121.4478], '汉口市': [30.5822, 114.2734], '九江市': [29.7056, 116.0017],
-            '南京市': [32.0603, 118.7969], '镇江市': [32.1989, 119.4550], '淡水市': [25.1696, 121.4444],
-            '台南市': [22.9997, 120.2270], '汕头市': [23.3710, 116.7081], '琼州市': [19.2465, 110.5138],
-            '天津市': [39.0841, 117.2009], '大沽市': [38.9833, 117.7167], '宜昌市': [30.6917, 111.2866],
-            '芜湖市': [31.3529, 118.4311], '温州市': [27.9949, 120.6994], '北海市': [21.4733, 109.1192],
-            '重庆市': [29.5630, 106.5516], '苏州市': [31.2990, 120.5853], '杭州市': [30.2741, 120.1551],
-            '荆州市': [30.3315, 112.2419], '深圳市': [22.5431, 114.0579], '珠海市': [22.2709, 113.5767],
-            '大连市': [38.9140, 121.6147], '秦皇岛市': [39.9354, 119.5892], '青岛市': [36.0671, 120.3826],
-            '连云港市': [34.5967, 119.2214], '南通市': [31.9686, 120.8730], '湛江市': [21.2710, 110.3594],
-            '钦州市': [21.9671, 108.6543], '唐山市': [39.6509, 118.1753], '丹东市': [40.1294, 124.3947],
-            '锦州市': [41.0944, 121.1419], '沧州市': [38.3044, 116.8387], '威海市': [37.5135, 122.1219],
-            '日照市': [35.4236, 119.5195], '盐城市': [33.3798, 120.1578], '台州市': [28.6562, 121.4210],
-            '泉州市': [24.8739, 118.6759], '漳州市': [24.5138, 117.6472], '东莞市': [23.0207, 113.7518],
-            '中山市': [22.5159, 113.3926], '惠州市': [23.1107, 114.4156], '江门市': [22.5789, 113.0817],
-            '防城港市': [21.6914, 108.3545], '海口市': [20.0174, 110.3492], '三亚市': [18.2546, 109.5034],
-            '儋州市': [19.5205, 109.5804], '浦东新区': [31.2448, 121.5082], '扬州市': [32.3942, 119.4129],
-            '泰州市': [32.4555, 119.9227], '莆田市': [25.4550, 119.0078], '汕尾市': [22.7860, 115.3728],
-            '阳江市': [21.8595, 111.9825], '舟山市': [30.0167, 122.1063], '武汉市': [30.5822, 114.2734]
-        };
-        const HISTORIC = [
-            { city: '广州市', time: 1842, treaty: '南京条约', war: '第一次鸦片战争', country: '英国' },
-            { city: '厦门市', time: 1842, treaty: '南京条约', war: '第一次鸦片战争', country: '英国' },
-            { city: '福州市', time: 1842, treaty: '南京条约', war: '第一次鸦片战争', country: '英国' },
-            { city: '宁波市', time: 1842, treaty: '南京条约', war: '第一次鸦片战争', country: '英国' },
-            { city: '上海市', time: 1842, treaty: '南京条约', war: '第一次鸦片战争', country: '英国' },
-            { city: '营口市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '烟台市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '汉口市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '九江市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '南京市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '镇江市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '淡水市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '台南市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '汕头市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '琼州市', time: 1858, treaty: '天津条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '天津市', time: 1860, treaty: '北京条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '大沽市', time: 1860, treaty: '北京条约', war: '第二次鸦片战争', country: '英法' },
-            { city: '宜昌市', time: 1876, treaty: '烟台条约', war: '马嘉理事件', country: '英国' },
-            { city: '芜湖市', time: 1876, treaty: '烟台条约', war: '马嘉理事件', country: '英国' },
-            { city: '温州市', time: 1876, treaty: '烟台条约', war: '马嘉理事件', country: '英国' },
-            { city: '北海市', time: 1876, treaty: '烟台条约', war: '马嘉理事件', country: '英国' },
-            { city: '重庆市', time: 1890, treaty: '马关条约', war: '甲午战争', country: '日本' },
-            { city: '苏州市', time: 1895, treaty: '马关条约', war: '甲午战争', country: '日本' },
-            { city: '杭州市', time: 1895, treaty: '马关条约', war: '甲午战争', country: '日本' },
-            { city: '荆州市', time: 1895, treaty: '马关条约', war: '甲午战争', country: '日本' }
-        ];
-        const MODERN = [
-            { city: '深圳市', time: 1980, type: '经济特区' }, { city: '珠海市', time: 1980, type: '经济特区' },
-            { city: '汕头市', time: 1980, type: '经济特区' }, { city: '厦门市', time: 1980, type: '经济特区' },
-            { city: '大连市', time: 1984, type: '沿海开放城市' }, { city: '秦皇岛市', time: 1984, type: '沿海开放城市' },
-            { city: '天津市', time: 1984, type: '沿海开放城市' }, { city: '烟台市', time: 1984, type: '沿海开放城市' },
-            { city: '青岛市', time: 1984, type: '沿海开放城市' }, { city: '连云港市', time: 1984, type: '沿海开放城市' },
-            { city: '南通市', time: 1984, type: '沿海开放城市' }, { city: '上海市', time: 1984, type: '沿海开放城市' },
-            { city: '宁波市', time: 1984, type: '沿海开放城市' }, { city: '温州市', time: 1984, type: '沿海开放城市' },
-            { city: '福州市', time: 1984, type: '沿海开放城市' }, { city: '广州市', time: 1984, type: '沿海开放城市' },
-            { city: '湛江市', time: 1984, type: '沿海开放城市' }, { city: '北海市', time: 1984, type: '沿海开放城市' },
-            { city: '钦州市', time: 1985, type: '沿海经济开放区' }, { city: '唐山市', time: 1985, type: '沿海经济开放区' },
-            { city: '丹东市', time: 1985, type: '沿海经济开放区' }, { city: '营口市', time: 1985, type: '沿海经济开放区' },
-            { city: '锦州市', time: 1985, type: '沿海经济开放区' }, { city: '沧州市', time: 1985, type: '沿海经济开放区' },
-            { city: '威海市', time: 1985, type: '沿海经济开放区' }, { city: '日照市', time: 1985, type: '沿海经济开放区' },
-            { city: '盐城市', time: 1985, type: '沿海经济开放区' }, { city: '台州市', time: 1985, type: '沿海经济开放区' },
-            { city: '泉州市', time: 1985, type: '沿海经济开放区' }, { city: '漳州市', time: 1985, type: '沿海经济开放区' },
-            { city: '东莞市', time: 1985, type: '沿海经济开放区' }, { city: '中山市', time: 1985, type: '沿海经济开放区' },
-            { city: '惠州市', time: 1985, type: '沿海经济开放区' }, { city: '江门市', time: 1985, type: '沿海经济开放区' },
-            { city: '防城港市', time: 1985, type: '沿海经济开放区' }, { city: '海口市', time: 1988, type: '经济特区' },
-            { city: '三亚市', time: 1988, type: '经济特区' }, { city: '儋州市', time: 1988, type: '经济特区' },
-            { city: '浦东新区', time: 1990, type: '特殊港区' }, { city: '扬州市', time: 1992, type: '沿海经济开放区' },
-            { city: '泰州市', time: 1992, type: '沿海经济开放区' }, { city: '莆田市', time: 1992, type: '沿海经济开放区' },
-            { city: '汕尾市', time: 1992, type: '沿海经济开放区' }, { city: '阳江市', time: 1992, type: '沿海经济开放区' },
-            { city: '舟山市', time: 2011, type: '沿海经济开放区' }, { city: '上海市', time: 2013, type: '自由贸易试验区' },
-            { city: '深圳市', time: 2015, type: '自由贸易试验区' }, { city: '珠海市', time: 2015, type: '自由贸易试验区' },
-            { city: '厦门市', time: 2015, type: '自由贸易试验区' }, { city: '天津市', time: 2015, type: '自由贸易试验区' },
-            { city: '福州市', time: 2015, type: '自由贸易试验区' }, { city: '广州市', time: 2015, type: '自由贸易试验区' },
-            { city: '舟山市', time: 2017, type: '自由贸易试验区' }, { city: '海口市', time: 2018, type: '自由贸易港' },
-            { city: '三亚市', time: 2018, type: '自由贸易港' }, { city: '儋州市', time: 2018, type: '自由贸易港' },
-            { city: '青岛市', time: 2019, type: '自由贸易试验区' }, { city: '北海市', time: 2019, type: '自由贸易试验区' },
-            { city: '钦州市', time: 2019, type: '自由贸易试验区' }, { city: '唐山市', time: 2019, type: '自由贸易试验区' },
-            { city: '连云港市', time: 2019, type: '自由贸易试验区' }
+        // ---------- 港口数据（2024-2025 吞吐量，单位：万 TEU） ----------
+        const ports = [
+            { name: "上海港", country: "中国", lat: 31.23, lng: 121.47, teu: 5150 },
+            { name: "新加坡港", country: "新加坡", lat: 1.35, lng: 103.82, teu: 4112 },
+            { name: "宁波舟山港", country: "中国", lat: 29.87, lng: 121.55, teu: 3930 },
+            { name: "深圳港", country: "中国", lat: 22.54, lng: 114.07, teu: 3340 },
+            { name: "青岛港", country: "中国", lat: 36.07, lng: 120.33, teu: 3087 },
+            { name: "广州港", country: "中国", lat: 23.13, lng: 113.26, teu: 2645 },
+            { name: "釜山港", country: "韩国", lat: 35.18, lng: 129.07, teu: 2440 },
+            { name: "天津港", country: "中国", lat: 39.02, lng: 117.74, teu: 2329 },
+            { name: "杰贝阿里港", country: "阿联酋", lat: 25.00, lng: 55.00, teu: 1550 },
+            { name: "巴生港", country: "马来西亚", lat: 3.00, lng: 101.40, teu: 1464 },
+            { name: "鹿特丹港", country: "荷兰", lat: 51.92, lng: 4.48, teu: 1400 },
+            { name: "安特卫普布鲁日港", country: "比利时", lat: 51.22, lng: 4.40, teu: 1300 },
+            { name: "丹戎帕拉帕斯港", country: "马来西亚", lat: 1.35, lng: 103.55, teu: 1225 },
+            { name: "香港港", country: "中国", lat: 22.30, lng: 114.17, teu: 1100 },
+            { name: "厦门港", country: "中国", lat: 24.48, lng: 118.09, teu: 1050 },
+            { name: "丹吉尔地中海港", country: "摩洛哥", lat: 35.90, lng: -5.50, teu: 900 },
+            { name: "林查班港", country: "泰国", lat: 13.08, lng: 100.88, teu: 850 },
+            { name: "苏州港", country: "中国", lat: 31.30, lng: 120.60, teu: 800 },
+            { name: "洛杉矶港", country: "美国", lat: 33.74, lng: -118.24, teu: 780 },
+            { name: "北部湾港", country: "中国", lat: 21.50, lng: 109.10, teu: 700 }
         ];
 
-        // 聚合数据
-        function buildCityData() {
-            const map = new Map();
-            function addRecord(city, time, type, event, country) {
-                if (!map.has(city)) map.set(city, { name: city, records: [] });
-                const entry = map.get(city);
-                if (!entry.records.some(r => r.time === time && r.type === type))
-                    entry.records.push({ time, type, event: event || '', country: country || '' });
-            }
-            HISTORIC.forEach(h => addRecord(h.city, h.time, h.treaty, h.war, h.country));
-            MODERN.forEach(m => addRecord(m.city, m.time, m.type, '', ''));
-            const result = [];
-            for (const [city, data] of map) {
-                data.records.sort((a, b) => a.time - b.time);
-                if (COORDS[city]) { data.coords = COORDS[city]; result.push(data); }
-            }
-            return result;
+        const maxTeu = Math.max(...ports.map(p => p.teu));
+        function getRadius(teu) {
+            const minR = 8, maxR = 35;
+            return minR + (teu / maxTeu) * (maxR - minR);
         }
-        const cityData = buildCityData();
 
-        // 颜色映射
-        const COLOR_MAP = {
-            '1842': '#ef4444', '1858': '#f97316', '1860': '#eab308',
-            '1876': '#a855f7', '1890': '#ec4899', '1980': '#22c55e',
-            '1984': '#3b82f6', '1985': '#06b6d4', '2010': '#f472b6',
-            'other': '#64748b'
+        // ---------- 初始化地图 ----------
+        const map = L.map('map').setView([20, 50], 3);
+
+        // ============================================================
+        // 天地图底图（已嵌入您的密钥）
+        // 密钥：210fc34860fb5a20dc04440711aa94a6
+        // ============================================================
+        const tk = '210fc34860fb5a20dc04440711aa94a6';
+
+        // 1. 矢量底图
+        L.tileLayer(`https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            attribution: '&copy; 天地图'
+        }).addTo(map);
+
+        // 2. 注记层（中文地名）
+        L.tileLayer(`https://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            attribution: '&copy; 天地图'
+        }).addTo(map);
+
+        // ---------- 绘制港口符号（分级圆点） ----------
+        ports.forEach(p => {
+            const radius = getRadius(p.teu);
+            const circle = L.circle([p.lat, p.lng], {
+                radius: radius * 10000,   // 转换为米（Leaflet 单位）
+                color: '#FF5733',
+                weight: 1,
+                fillColor: '#FF5733',
+                fillOpacity: 0.6,
+            }).addTo(map);
+
+            circle.bindPopup(`
+                <strong>${p.name}</strong><br>
+                国家：${p.country}<br>
+                吞吐量：${p.teu.toLocaleString()} 万 TEU
+            `);
+        });
+
+        // ---------- 图例（右下角） ----------
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <h4>吞吐量等级</h4>
+                <div><span class="legend-circle" style="width:12px;height:12px;"></span> 700 万 TEU</div>
+                <div><span class="legend-circle" style="width:18px;height:18px;"></span> 1500 万 TEU</div>
+                <div><span class="legend-circle" style="width:24px;height:24px;"></span> 2500 万 TEU</div>
+                <div><span class="legend-circle" style="width:32px;height:32px;"></span> 4000 万 TEU</div>
+                <div><span class="legend-circle" style="width:40px;height:40px;"></span> 5150 万 TEU</div>
+                <hr style="margin:6px 0;">
+                <div style="font-size:12px; color:#555;">点击圆圈查看详情</div>
+            `;
+            // 调整图例圆圈大小（与实际比例对应）
+            const circles = div.querySelectorAll('.legend-circle');
+            const sizes = [700, 1500, 2500, 4000, 5150];
+            circles.forEach((el, i) => {
+                const r = getRadius(sizes[i]);
+                el.style.width = (r * 1.5) + 'px';
+                el.style.height = (r * 1.5) + 'px';
+                el.style.background = '#FF5733';
+                el.style.opacity = '0.7';
+                el.style.borderRadius = '50%';
+                el.style.display = 'inline-block';
+                el.style.verticalAlign = 'middle';
+            });
+            return div;
         };
-        function getPeriodKey(time) {
-            if (time === 1842) return '1842';
-            if (time === 1858) return '1858';
-            if (time === 1860) return '1860';
-            if (time === 1876) return '1876';
-            if (time === 1890 || time === 1895) return '1890';
-            if (time === 1980) return '1980';
-            if (time === 1984) return '1984';
-            if (time >= 1985 && time <= 1992) return '1985';
-            if (time >= 2010) return '2010';
-            return 'other';
-        }
-        function getColorByTime(time) { return COLOR_MAP[getPeriodKey(time)] || '#64748b'; }
-        function getColorByPeriodKey(key) { return COLOR_MAP[key] || '#64748b'; }
+        legend.addTo(map);
 
-        // ============================================================
-        // 2. 自定义 SVG 图钉图标
-        // ============================================================
-        function createPinIcon(color) {
-            return L.divIcon({
-                className: 'custom-pin',
-                html: `<svg viewBox="0 0 24 36" width="24" height="36" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="${color}" stroke="#ffffff" stroke-width="2"/>
-                        <circle cx="12" cy="12" r="4" fill="#ffffff"/>
-                       </svg>`,
-                iconSize: [24, 36],
-                iconAnchor: [12, 36],
-                popupAnchor: [0, -36]
-            });
-        }
+        // ---------- 比例尺 ----------
+        L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-        // ============================================================
-        // 3. 地图初始化（天地图）
-        // ============================================================
-        const map = L.map('map', {
-            center: [35.0, 108.0],
-            zoom: 4.5,
-            minZoom: 2,
-            zoomControl: true
-        });
+        // ---------- 标题（右上角） ----------
+        const titleControl = L.control({ position: 'topright' });
+        titleControl.onAdd = function() {
+            const div = L.DomUtil.create('div', 'info');
+            div.innerHTML = '<strong>全球主要港口分布与吞吐量图</strong><br><span style="font-size:12px;color:#666;">2024-2025 数据</span>';
+            return div;
+        };
+        titleControl.addTo(map);
 
-        const TK = '210fc34860fb5a20dc04440711aa94a6';  // 你的密钥
-
-        L.tileLayer('https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TK, {
-            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
-            maxZoom: 18,
-            minZoom: 2,
-            attribution: '© 天地图'
-        }).addTo(map);
-
-        L.tileLayer('https://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=' + TK, {
-            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
-            maxZoom: 18,
-            minZoom: 2,
-            attribution: '© 天地图'
-        }).addTo(map);
-
-        // ============================================================
-        // 4. 标记管理
-        // ============================================================
-        let markersLayer = L.layerGroup().addTo(map);
-        let allMarkers = [];
-
-        function getLatestRecord(records) { return records.reduce((a, b) => a.time > b.time ? a : b); }
-
-        function buildPopupContent(city) {
-            let html = `<div class="popup-city">📍 ${city.name}</div>`;
-            city.records.sort((a, b) => a.time - b.time).forEach(r => {
-                const color = getColorByTime(r.time);
-                let detail = (r.event ? ' ' + r.event : '') + (r.country ? ' · ' + r.country : '');
-                html += `<div class="popup-record">
-                            <span class="badge" style="background:${color};">${r.time}</span>
-                            <span><strong>${r.type}</strong></span>
-                            <span class="detail">${detail}</span>
-                        </div>`;
-            });
-            return html;
-        }
-
-        function buildMarkers() {
-            markersLayer.clearLayers();
-            allMarkers = [];
-            cityData.forEach(city => {
-                const latest = getLatestRecord(city.records);
-                const color = getColorByTime(latest.time);
-                const marker = L.marker(city.coords, {
-                    icon: createPinIcon(color)
-                });
-                marker.bindPopup(buildPopupContent(city), { className: 'custom-popup', maxWidth: 320 });
-                marker._cityData = city;
-                marker._latestTime = latest.time;
-                marker._periodKey = getPeriodKey(latest.time);
-                markersLayer.addLayer(marker);
-                allMarkers.push({ marker, city: city.name, records: city.records, latestTime: latest.time, periodKey: getPeriodKey(latest.time) });
-            });
-            updateStats('all');
-        }
-
-        // ============================================================
-        // 5. 动态筛选 + 变色
-        // ============================================================
-        function filterMarkers(filterKey) {
-            let visible = 0;
-            allMarkers.forEach(item => {
-                const marker = item.marker;
-                let show = false;
-                let color = '#64748b';
-
-                if (filterKey === 'all') {
-                    show = true;
-                    const latest = getLatestRecord(item.records);
-                    color = getColorByTime(latest.time);
-                } else if (filterKey === 'historical') {
-                    const hasHistorical = item.records.some(r => r.time >= 1842 && r.time <= 1895);
-                    if (hasHistorical) { show = true;
-                        color = '#b91c1c'; }
-                } else if (filterKey === 'modern') {
-                    const hasModern = item.records.some(r => r.time >= 1980 && r.time <= 2019);
-                    if (hasModern) { show = true;
-                        color = '#2563eb'; }
-                } else {
-                    const matchedRecord = item.records.find(r => getPeriodKey(r.time) === filterKey);
-                    if (matchedRecord) { show = true;
-                        color = getColorByPeriodKey(filterKey); }
-                }
-
-                if (show) {
-                    marker.setIcon(createPinIcon(color));
-                    markersLayer.addLayer(marker);
-                    visible++;
-                } else {
-                    markersLayer.removeLayer(marker);
-                }
-            });
-            updateStats(filterKey, visible);
-        }
-
-        function updateStats(filterKey, count) {
-            document.getElementById('count-display').textContent = count;
-            const labels = {
-                'all': '全部时期',
-                'historical': '近代 (1842-1895)',
-                'modern': '现代 (1980-2019)',
-                '1842': '1842 南京条约',
-                '1858': '1858 天津条约',
-                '1860': '1860 北京条约',
-                '1876': '1876 烟台条约',
-                '1890': '1890·马关条约',
-                '1980': '1980 经济特区',
-                '1984': '1984 沿海开放城市',
-                '1985': '1985 沿海经济开放区',
-                '2010': '2010+ 自贸区/港'
-            };
-            document.getElementById('period-display').textContent = labels[filterKey] || '全部时期';
-        }
-
-        // 绑定筛选按钮
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                filterMarkers(this.dataset.filter);
-            });
-        });
-
-        map.on('click', () => map.closePopup());
-
-        // 启动
-        buildMarkers();
-        filterMarkers('all');
-        setTimeout(() => map.invalidateSize(), 300);
-        window.addEventListener('resize', () => map.invalidateSize());
-        console.log('✅ 图钉版地图加载完成');
+        console.log('地图加载完成，天地图密钥已生效。');
     </script>
 </body>
 </html>
