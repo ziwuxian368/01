@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球主要港口分布与吞吐量图</title>
+    <!-- Leaflet 核心库 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+        .info {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .legend {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            line-height: 1.8;
+        }
+        .legend h4 { margin: 0 0 5px 0; }
+        .legend-circle {
+            display: inline-block;
+            border-radius: 50%;
+            background: #FF5733;
+            opacity: 0.7;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        // ---------- 港口数据（2024-2025 吞吐量，单位：万 TEU） ----------
+        const ports = [
+            { name: "上海港", country: "中国", lat: 31.23, lng: 121.47, teu: 5150 },
+            { name: "新加坡港", country: "新加坡", lat: 1.35, lng: 103.82, teu: 4112 },
+            { name: "宁波舟山港", country: "中国", lat: 29.87, lng: 121.55, teu: 3930 },
+            { name: "深圳港", country: "中国", lat: 22.54, lng: 114.07, teu: 3340 },
+            { name: "青岛港", country: "中国", lat: 36.07, lng: 120.33, teu: 3087 },
+            { name: "广州港", country: "中国", lat: 23.13, lng: 113.26, teu: 2645 },
+            { name: "釜山港", country: "韩国", lat: 35.18, lng: 129.07, teu: 2440 },
+            { name: "天津港", country: "中国", lat: 39.02, lng: 117.74, teu: 2329 },
+            { name: "杰贝阿里港", country: "阿联酋", lat: 25.00, lng: 55.00, teu: 1550 },
+            { name: "巴生港", country: "马来西亚", lat: 3.00, lng: 101.40, teu: 1464 },
+            { name: "鹿特丹港", country: "荷兰", lat: 51.92, lng: 4.48, teu: 1400 },
+            { name: "安特卫普布鲁日港", country: "比利时", lat: 51.22, lng: 4.40, teu: 1300 },
+            { name: "丹戎帕拉帕斯港", country: "马来西亚", lat: 1.35, lng: 103.55, teu: 1225 },
+            { name: "香港港", country: "中国", lat: 22.30, lng: 114.17, teu: 1100 },
+            { name: "厦门港", country: "中国", lat: 24.48, lng: 118.09, teu: 1050 },
+            { name: "丹吉尔地中海港", country: "摩洛哥", lat: 35.90, lng: -5.50, teu: 900 },
+            { name: "林查班港", country: "泰国", lat: 13.08, lng: 100.88, teu: 850 },
+            { name: "苏州港", country: "中国", lat: 31.30, lng: 120.60, teu: 800 },
+            { name: "洛杉矶港", country: "美国", lat: 33.74, lng: -118.24, teu: 780 },
+            { name: "北部湾港", country: "中国", lat: 21.50, lng: 109.10, teu: 700 }
+        ];
+
+        const maxTeu = Math.max(...ports.map(p => p.teu));
+        function getRadius(teu) {
+            const minR = 8, maxR = 35;
+            return minR + (teu / maxTeu) * (maxR - minR);
+        }
+
+        // ---------- 初始化地图 ----------
+        const map = L.map('map').setView([20, 50], 3);
+
+        // ============================================================
+        // 天地图底图（已嵌入您的密钥）
+        // 密钥：210fc34860fb5a20dc04440711aa94a6
+        // ============================================================
+        const tk = '210fc34860fb5a20dc04440711aa94a6';
+
+        // 1. 矢量底图
+        L.tileLayer(`https://t{s}.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            attribution: '&copy; 天地图'
+        }).addTo(map);
+
+        // 2. 注记层（中文地名）
+        L.tileLayer(`https://t{s}.tianditu.gov.cn/cva_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cva&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${tk}`, {
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            attribution: '&copy; 天地图'
+        }).addTo(map);
+
+        // ---------- 绘制港口符号（分级圆点） ----------
+        ports.forEach(p => {
+            const radius = getRadius(p.teu);
+            const circle = L.circle([p.lat, p.lng], {
+                radius: radius * 10000,   // 转换为米（Leaflet 单位）
+                color: '#FF5733',
+                weight: 1,
+                fillColor: '#FF5733',
+                fillOpacity: 0.6,
+            }).addTo(map);
+
+            circle.bindPopup(`
+                <strong>${p.name}</strong><br>
+                国家：${p.country}<br>
+                吞吐量：${p.teu.toLocaleString()} 万 TEU
+            `);
+        });
+
+        // ---------- 图例（右下角） ----------
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <h4>吞吐量等级</h4>
+                <div><span class="legend-circle" style="width:12px;height:12px;"></span> 700 万 TEU</div>
+                <div><span class="legend-circle" style="width:18px;height:18px;"></span> 1500 万 TEU</div>
+                <div><span class="legend-circle" style="width:24px;height:24px;"></span> 2500 万 TEU</div>
+                <div><span class="legend-circle" style="width:32px;height:32px;"></span> 4000 万 TEU</div>
+                <div><span class="legend-circle" style="width:40px;height:40px;"></span> 5150 万 TEU</div>
+                <hr style="margin:6px 0;">
+                <div style="font-size:12px; color:#555;">点击圆圈查看详情</div>
+            `;
+            // 调整图例圆圈大小（与实际比例对应）
+            const circles = div.querySelectorAll('.legend-circle');
+            const sizes = [700, 1500, 2500, 4000, 5150];
+            circles.forEach((el, i) => {
+                const r = getRadius(sizes[i]);
+                el.style.width = (r * 1.5) + 'px';
+                el.style.height = (r * 1.5) + 'px';
+                el.style.background = '#FF5733';
+                el.style.opacity = '0.7';
+                el.style.borderRadius = '50%';
+                el.style.display = 'inline-block';
+                el.style.verticalAlign = 'middle';
+            });
+            return div;
+        };
+        legend.addTo(map);
+
+        // ---------- 比例尺 ----------
+        L.control.scale({ position: 'bottomleft' }).addTo(map);
+
+        // ---------- 标题（右上角） ----------
+        const titleControl = L.control({ position: 'topright' });
+        titleControl.onAdd = function() {
+            const div = L.DomUtil.create('div', 'info');
+            div.innerHTML = '<strong>全球主要港口分布与吞吐量图</strong><br><span style="font-size:12px;color:#666;">2024-2025 数据</span>';
+            return div;
+        };
+        titleControl.addTo(map);
+
+        console.log('地图加载完成，天地图密钥已生效。');
+    </script>
+</body>
+</html>
